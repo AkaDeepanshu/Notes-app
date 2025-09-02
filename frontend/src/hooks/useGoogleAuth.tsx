@@ -1,29 +1,31 @@
-import { useGoogleLogin } from '@react-oauth/google';
-import { googleLogin } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useGoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
+import { googleLogin } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export const useGoogleAuth = () => {
   const { login } = useAuth();
 
-  const signInWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        // Ensure we have an access token before proceeding
-        if (!tokenResponse.access_token) {
-          console.error('No access token received from Google');
-          return;
-        }
-        
-        const response = await googleLogin(tokenResponse.access_token);
+  const responseGoogle = async (authResponse:any) => {
+    try {
+      if (authResponse["code"]) {
+        console.log("Google auth code:", authResponse.code);
+        const response = await googleLogin(authResponse.code);
         login(response.data);
-      } catch (error) {
-        console.error('Google login failed:', error);
       }
-    },
+    } catch (err) {
+      console.error("Google login failed:", err);
+      toast.error("Google authentication failed. Please try email/OTP login instead.");
+    }
+  };
+
+  const signInWithGoogle = useGoogleLogin({
+    onSuccess: responseGoogle,
     onError: (error) => {
-      console.error('Google login error:', error);
+      console.error("Google OAuth error:", error);
+      toast.error("Google authentication is currently unavailable. Please use email/OTP login.");
     },
-    flow: 'implicit', // Use implicit flow for simplicity
+    flow: "auth-code",
   });
 
   return signInWithGoogle;

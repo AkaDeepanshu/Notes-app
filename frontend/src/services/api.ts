@@ -36,8 +36,8 @@ export const verifyOTP = async (data: {
   return api.post('/auth/verify-otp', data);
 };
 
-export const googleLogin = async (accessToken: string) => {
-  return api.post('/auth/google', { accessToken });
+export const googleLogin = async (code: string) => {
+  return api.post('/auth/google', { code });
 };
 
 export const getMe = async () => {

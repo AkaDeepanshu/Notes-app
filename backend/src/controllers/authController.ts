@@ -4,7 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import User, { IUser } from '../models/userModel';
 import { generateOTP, sendEmail, createOTPEmail } from '../utils/emailService';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
 
 // Generate JWT
 const generateToken = (id: string) => {
@@ -120,22 +120,22 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
 // Login with Google
 export const googleLogin = async (req: Request, res: Response) => {
-  const { accessToken } = req.body;
-
-  if (!accessToken) {
-    return res.status(400).json({ message: 'Google access token is required' });
-  }
+ const { code } = req.body;
+  if (!code) return res.status(400).json({ message: "Authorization code is required" });
 
   try {
-    // For access tokens, we need to use the tokeninfo endpoint
-    const response = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${accessToken}`);
+    const { tokens } = await client.getToken({
+      code,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    });
+
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token!,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
     
-    if (!response.ok) {
-      console.error('Google API Error:', await response.text());
-      return res.status(401).json({ message: 'Invalid Google token' });
-    }
-    
-    const payload = await response.json();
+    const payload = ticket.getPayload();
 
     if (!payload || !payload.email) {
       return res.status(400).json({ message: 'Invalid Google token payload' });
@@ -149,18 +149,18 @@ export const googleLogin = async (req: Request, res: Response) => {
       user = await User.create({
         name: payload.name || payload.email?.split('@')[0],
         email: payload.email,
-        googleId: payload.sub || payload.user_id || payload.email,
+        googleId: payload.sub || payload.email,
       });
     } else if (!user.googleId) {
       // Link Google ID to existing user account
-      user.googleId = payload.sub || payload.user_id || payload.email;
+      user.googleId = payload.sub|| payload.email;
       await user.save();
     }
 
     // Generate JWT token
     const token = generateToken(user._id as string);
 
-    res.status(200).json({
+    return res.status(200).json({
       _id: user._id,
       name: user.name,
       email: user.email,
@@ -168,7 +168,7 @@ export const googleLogin = async (req: Request, res: Response) => {
       token,
     });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
