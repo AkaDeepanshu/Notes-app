@@ -88,10 +88,10 @@ function App() {
             toastOptions={{
               duration: 4000,
               style: {
-  background: '#FFFFFF',
-  color: '#1F2937',  // Tailwind gray-800
-  boxShadow: '0 2px 12px rgba(0,0,0,0.1)', // subtle elevation
-}
+                background: "#FFFFFF",
+                color: "#1F2937",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+              },
             }}
           />
           <AppRoutes />
