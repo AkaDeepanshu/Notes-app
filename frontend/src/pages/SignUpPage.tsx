@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { InputField } from "../components/InputField";
 import { Button } from "../components/Button";
 import { useAuth } from "../context/AuthContext";
-import { sendOTP, verifyOTP } from "../services/api";
+import { sendSignupOTP, verifySignupOTP } from "../services/api";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import logo from "../assets/icon.png";
 import background from "../assets/background.png";
@@ -32,11 +32,11 @@ export const SignUpPage = () => {
     setLoading(true);
 
     try {
-      await sendOTP(email);
+      await sendSignupOTP(email);
       setOtpSent(true);
-      toast.success("OTP sent successfully!");
+      toast.success("Signup OTP sent successfully!");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to send OTP");
+      toast.error(error.response?.data?.message || "Failed to send signup OTP");
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export const SignUpPage = () => {
     setLoading(true);
 
     try {
-      const response = await verifyOTP({ email, otp, name, dateOfBirth });
+      const response = await verifySignupOTP({ email, otp, name, dateOfBirth });
       login(response.data);
       toast.success("Account created successfully!");
       navigate("/dashboard");
@@ -71,10 +71,10 @@ export const SignUpPage = () => {
     setLoading(true);
 
     try {
-      await sendOTP(email);
-      toast.success("OTP resent successfully!");
+      await sendSignupOTP(email);
+      toast.success("Signup OTP resent successfully!");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to resend OTP");
+      toast.error(error.response?.data?.message || "Failed to resend signup OTP");
     } finally {
       setLoading(false);
     }

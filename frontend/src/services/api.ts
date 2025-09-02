@@ -23,18 +23,30 @@ api.interceptors.request.use(
 );
 
 // Auth API
-export const sendOTP = async (email: string) => {
-  return api.post('/auth/send-otp', { email });
+export const sendLoginOTP = async (email: string) => {
+  return api.post('/auth/send-login-otp', { email });
 };
 
-export const verifyOTP = async (data: {
+export const sendSignupOTP = async (email: string) => {
+  return api.post('/auth/send-signup-otp', { email });
+};
+
+export const verifyLoginOTP = async (data: {
   email: string;
   otp: string;
-  name?: string;
+}) => {
+  return api.post('/auth/verify-login-otp', data);
+};
+
+export const verifySignupOTP = async (data: {
+  email: string;
+  otp: string;
+  name: string;
   dateOfBirth?: string;
 }) => {
-  return api.post('/auth/verify-otp', data);
+  return api.post('/auth/verify-signup-otp', data);
 };
+
 
 export const googleLogin = async (code: string) => {
   return api.post('/auth/google', { code });

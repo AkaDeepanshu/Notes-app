@@ -13,8 +13,52 @@ const generateToken = (id: string) => {
   });
 };
 
-// Send OTP for login or signup
-export const sendOTP = async (req: Request, res: Response) => {
+// Send OTP for login (only for existing users)
+export const sendLoginOTP = async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+
+  try {
+    // Check if user exists - login OTP should only be sent to registered users
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email. Please sign up first.' });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update existing user with new OTP
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    // Send OTP email
+    const { text, html } = createOTPEmail(otp);
+    const emailSent = await sendEmail(
+      email,
+      'Your Login OTP Verification Code',
+      text,
+      html
+    );
+
+    if (!emailSent) {
+      return res.status(500).json({ message: 'Failed to send OTP email' });
+    }
+
+    res.status(200).json({ message: 'Login OTP sent successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// Send OTP for signup (for new users)
+export const sendSignupOTP = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   if (!email) {
@@ -26,29 +70,27 @@ export const sendOTP = async (req: Request, res: Response) => {
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Check if user exists
+    // Check if user already exists
     let user = await User.findOne({ email });
 
     if (user) {
-      // Update existing user with new OTP
-      user.otp = otp;
-      user.otpExpires = otpExpires;
-      await user.save();
-    } else {
-      // Create a temporary user entry with OTP
-      user = await User.create({
-        email,
-        name: email.split('@')[0], // Temporary name from email
-        otp,
-        otpExpires,
-      });
+      // If user exists, this should be a login, not signup
+      return res.status(409).json({ message: 'Account already exists with this email. Please sign in instead.' });
     }
+
+    // Create a temporary user entry with OTP for signup
+    user = await User.create({
+      email,
+      name: email.split('@')[0], // Temporary name from email
+      otp,
+      otpExpires,
+    });
 
     // Send OTP email
     const { text, html } = createOTPEmail(otp);
     const emailSent = await sendEmail(
       email,
-      'Your OTP Verification Code',
+      'Your Signup OTP Verification Code',
       text,
       html
     );
@@ -57,15 +99,15 @@ export const sendOTP = async (req: Request, res: Response) => {
       return res.status(500).json({ message: 'Failed to send OTP email' });
     }
 
-    res.status(200).json({ message: 'OTP sent successfully' });
+    res.status(200).json({ message: 'Signup OTP sent successfully' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Verify OTP and complete signup
-export const verifyOTP = async (req: Request, res: Response) => {
-  const { email, otp, name, dateOfBirth } = req.body;
+// Verify OTP for login
+export const verifyLoginOTP = async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
 
   if (!email || !otp) {
     return res.status(400).json({ message: 'Email and OTP are required' });
@@ -88,11 +130,57 @@ export const verifyOTP = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'OTP has expired' });
     }
 
-    // Update user information if provided
-    if (name) {
-      user.name = name;
+    // Clear OTP after successful verification
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    // Generate JWT token
+    const token = generateToken(user._id as string);
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      dateOfBirth: user.dateOfBirth,
+      token,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Verify OTP and complete signup
+export const verifySignupOTP = async (req: Request, res: Response) => {
+  const { email, otp, name, dateOfBirth } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ message: 'Email and OTP are required' });
+  }
+
+  if (!name) {
+    return res.status(400).json({ message: 'Name is required for signup' });
+  }
+
+  try {
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found. Please request OTP again.' });
     }
 
+    // Check if OTP is valid and not expired
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    if (user.otpExpires && user.otpExpires < new Date()) {
+      return res.status(400).json({ message: 'OTP has expired' });
+    }
+
+    // Update user information with provided data
+    user.name = name;
     if (dateOfBirth) {
       user.dateOfBirth = new Date(dateOfBirth);
     }
@@ -117,6 +205,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Login with Google
 export const googleLogin = async (req: Request, res: Response) => {

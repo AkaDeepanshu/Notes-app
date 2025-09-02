@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { InputField } from "../components/InputField";
 import { Button } from "../components/Button";
 import { useAuth } from "../context/AuthContext";
-import { sendOTP, verifyOTP } from "../services/api";
+import { sendLoginOTP, verifyLoginOTP } from "../services/api";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import logo from "../assets/icon.png";
 import background from "../assets/background.png";
@@ -30,11 +30,11 @@ export const SignInPage = () => {
     setLoading(true);
 
     try {
-      await sendOTP(email);
+      await sendLoginOTP(email);
       setOtpSent(true);
-      toast.success("OTP sent successfully!");
+      toast.success("Login OTP sent successfully!");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to send OTP");
+      toast.error(error.response?.data?.message || "Failed to send login OTP");
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,7 @@ export const SignInPage = () => {
     setLoading(true);
 
     try {
-      const response = await verifyOTP({ email, otp });
+      const response = await verifyLoginOTP({ email, otp });
       login(response.data);
       toast.success("Login successful!");
       navigate("/dashboard");
@@ -68,11 +68,11 @@ export const SignInPage = () => {
   const handleResendOTP = async () => {
     setLoading(true);
     try {
-      await sendOTP(email);
+      await sendLoginOTP(email);
       setOtpSent(true);
-      toast.success("OTP resent successfully!");
+      toast.success("Login OTP resent successfully!");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to resend OTP");
+      toast.error(error.response?.data?.message || "Failed to resend login OTP");
     } finally {
       setLoading(false);
     }
