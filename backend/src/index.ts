@@ -26,6 +26,12 @@ mongoose.connect(process.env.MONGODB_URL as string)
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
+app.get('/',(req,res)=>{
+  return res.json({
+    status:"true",
+    message:"Server is Up and Running!!"
+  })
+})
 
 // Start server
 // app.listen(port, () => {
