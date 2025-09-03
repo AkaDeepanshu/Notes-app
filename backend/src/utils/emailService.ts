@@ -18,7 +18,7 @@ export const sendEmail = async (
     });
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: 'HD Notes App <no-reply@hdnotes.com>',
       to,
       subject,
       text,
