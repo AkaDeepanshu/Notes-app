@@ -32,13 +32,19 @@ export const sendLoginOTP = async (req: Request, res: Response) => {
     // Update OTP fields only
     await User.updateOne({ _id: user._id }, { otp, otpExpires });
 
+    const { text, html } = createOTPEmail(otp);
+    const emailSent = await sendEmail(
+      email,
+      'Your Login OTP Verification Code',
+      text,
+      html
+    );
+
+    if (!emailSent) {
+      return res.status(500).json({ message: 'Failed to send OTP email' });
+    }
     // Respond immediately
     res.status(200).json({ message: 'Login OTP sent successfully' });
-
-    // Send email in background
-    const { text, html } = createOTPEmail(otp);
-    sendEmail(email, 'Your Login OTP', text, html)
-      .catch(err => console.error('Failed to send OTP email:', err));
 
   } catch (error: any) {
     res.status(500).json({ message: error.message });
