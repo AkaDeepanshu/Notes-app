@@ -17,43 +17,31 @@ const generateToken = (id: string) => {
 export const sendLoginOTP = async (req: Request, res: Response) => {
   const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: 'Email is required' });
-  }
+  if (!email) return res.status(400).json({ message: 'Email is required' });
 
   try {
-    // Check if user exists - login OTP should only be sent to registered users
-    const user = await User.findOne({ email });
+    // Check user exists
+    const user = await User.findOne({ email }).select('_id'); 
 
-    if (!user) {
-      return res.status(404).json({ message: 'No account found with this email. Please sign up first.' });
-    }
+    if (!user) return res.status(404).json({ message: 'No account found with this email' });
 
     // Generate OTP
     const otp = generateOTP();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Update existing user with new OTP
-    user.otp = otp;
-    user.otpExpires = otpExpires;
-    await user.save();
+    // Update OTP fields only
+    await User.updateOne({ _id: user._id }, { otp, otpExpires });
 
-    // Send OTP email
-    const { text, html } = createOTPEmail(otp);
-    const emailSent = await sendEmail(
-      email,
-      'Your Login OTP Verification Code',
-      text,
-      html
-    );
-
-    if (!emailSent) {
-      return res.status(500).json({ message: 'Failed to send OTP email' });
-    }
-
+    // Respond immediately
     res.status(200).json({ message: 'Login OTP sent successfully' });
+
+    // Send email in background
+    const { text, html } = createOTPEmail(otp);
+    sendEmail(email, 'Your Login OTP', text, html)
+      .catch(err => console.error('Failed to send OTP email:', err));
+
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
