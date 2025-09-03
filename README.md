@@ -86,8 +86,7 @@ Create a `.env` file in the `backend` directory with the following variables:
 PORT=5000
 
 # Database
-MONGODB_URL=mongodb://localhost:27017/notes-app
-# or use MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/notes-app
+MONGODB_URL= your_mongodb_url
 
 # JWT Secret (generate a strong random string)
 JWT_SECRET=your-super-secret-jwt-key-here
